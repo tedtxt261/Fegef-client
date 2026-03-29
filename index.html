@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fegef executor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e1e1e, #0a0a0a);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .executor-container {
+            width: 600px;
+            height: 400px;
+            background: rgba(20, 20, 30, 0.85);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .executor-header {
+            height: 40px;
+            background: rgba(30, 30, 40, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            cursor: move;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .executor-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #ffffff;
+        }
+
+        .executor-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .minimize {
+            background: #f1c40f;
+        }
+
+        .maximize {
+            background: #2ecc71;
+        }
+
+        .close {
+            background: #e74c3c;
+        }
+
+        .executor-body {
+            height: calc(100% - 40px);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .script-area {
+            flex-grow: 1;
+            background: rgba(10, 10, 20, 0.7);
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            resize: none;
+            margin-bottom: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .executor-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            color: white;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .rainbow-border {
+            position: relative;
+            z-index: 1;
+        }
+
+        .rainbow-border::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            border-radius: 5px;
+            z-index: -1;
+            animation: rainbow 5s linear infinite;
+        }
+
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        .execute-btn {
+            background: #3498db;
+        }
+
+        .clear-btn {
+            background: #e74c3c;
+        }
+
+        .inject-btn {
+            background: #2ecc71;
+        }
+
+        .draggable-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 10px;
+            cursor: move;
+            z-index: 1000;
+            border: 3px solid transparent;
+            background-image: linear-gradient(#1e1e1e, #1e1e1e), 
+                              linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            background-origin: border-box;
+            background-clip: content-box, border-box;
+            animation: rainbow 5s linear infinite;
+        }
+
+        .draggable-image img {
+            width: 100%;
+            height: 100%;
+            border-radius: 7px;
+            object-fit: cover;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 15px 20px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="draggable-image" id="mainImage">
+        <img src="gui.png" alt="GUI Image">
+    </div>
+
+    <div class="executor-container hidden" id="executorUI">
+        <div class="executor-header" id="dragHandle">
+            <div class="executor-title">fegef executor</div>
+            <div class="executor-controls">
+                <div class="control-btn minimize"></div>
+                <div class="control-btn maximize"></div>
+                <div class="control-btn close" id="closeBtn"></div>
+            </div>
+        </div>
+        <div class="executor-body">
+            <textarea class="script-area" id="scriptInput" placeholder="-- Enter your script here
+-- Example: print('Hello World') or require(12345678)"></textarea>
+            <div class="button-container">
+                <button class="executor-btn execute-btn rainbow-border" id="executeBtn">Execute</button>
+                <button class="executor-btn clear-btn rainbow-border" id="clearBtn">Clear</button>
+                <button class="executor-btn inject-btn rainbow-border" id="injectBtn">Inject</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Draggable functionality for the image
+        const mainImage = document.getElementById('mainImage');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        mainImage.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            if (e.target === mainImage || e.target.parentElement === mainImage) {
+                isDragging = true;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+
+                mainImage.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        // Open executor UI when image is clicked
+        mainImage.addEventListener('click', function() {
+            document.getElementById('executorUI').classList.remove('hidden');
+            mainImage.classList.add('hidden');
+        });
+
+        // Draggable functionality for executor UI
+        const executorUI = document.getElementById('executorUI');
+        const dragHandle = document.getElementById('dragHandle');
+        let isExecutorDragging = false;
+        let execCurrentX;
+        let execCurrentY;
+        let execInitialX;
+        let execInitialY;
+        let execXOffset = 0;
+        let execYOffset = 0;
+
+        dragHandle.addEventListener('mousedown', executorDragStart);
+        document.addEventListener('mousemove', executorDrag);
+        document.addEventListener('mouseup', executorDragEnd);
+
+        function executorDragStart(e) {
+            if (e.target === dragHandle || e.target.parentElement === dragHandle) {
+                execInitialX = e.clientX - execXOffset;
+                execInitialY = e.clientY - execYOffset;
+                isExecutorDragging = true;
+            }
+        }
+
+        function executorDrag(e) {
+            if (isExecutorDragging) {
+                e.preventDefault();
+                execCurrentX = e.clientX
